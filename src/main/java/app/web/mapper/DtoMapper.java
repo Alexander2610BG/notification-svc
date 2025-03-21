@@ -1,8 +1,10 @@
 package app.web.mapper;
 
+import app.model.Notification;
 import app.model.NotificationPreference;
 import app.model.NotificationType;
 import app.web.dto.NotificationPreferenceResponse;
+import app.web.dto.NotificationResponse;
 import app.web.dto.NotificationTypeRequest;
 import jakarta.validation.constraints.NotNull;
 import lombok.experimental.UtilityClass;
@@ -23,6 +25,16 @@ public class DtoMapper {
                 .contactInfo(entity.getContactInfo())
                 .enabled(entity.isEnabled())
                 .userId(entity.getUserId())
+                .build();
+    }
+
+    public static NotificationResponse fromNotification(Notification entity) {
+
+        return NotificationResponse.builder()
+                .subject(entity.getSubject())
+                .status(entity.getStatus())
+                .createdOn(entity.getCreatedOn())
+                .type(entity.getType())
                 .build();
     }
 }
