@@ -89,4 +89,20 @@ public class NotificationController {
                 .body(responseDto);
     }
 
+    @DeleteMapping
+    public ResponseEntity<Void> clearNotificationHistory(@RequestParam("userId") UUID userId) {
+
+        notificationService.clearNotifications(userId);
+
+        return ResponseEntity.ok().body(null);
+    }
+
+    @PutMapping
+    public ResponseEntity<Void> retryFailedNotifications(@RequestParam("userId") UUID userId) {
+
+        notificationService.retryFailedNotifications(userId);
+
+        return ResponseEntity.ok().body(null);
+    }
+
 }
