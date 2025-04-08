@@ -24,9 +24,8 @@ import java.util.UUID;
 import static app.TestBuilder.aRandomNotification;
 import static app.TestBuilder.aRandomNotificationPreference;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +81,72 @@ public class NotificationControllerApiTest {
     }
 
     @Test
+    void getNotificationHistory_happyPath() throws Exception {
+
+        // 1. Prepare test data
+        UUID userId = UUID.randomUUID();
+        List<NotificationResponse> notificationResponses = List.of(
+                NotificationResponse.builder()
+                        .subject("Test Subject 1")
+                        .status(NotificationStatus.SUCCEEDED)
+                        .createdOn(LocalDateTime.now())
+                        .type(NotificationType.EMAIL)
+                        .build(),
+                NotificationResponse.builder()
+                        .subject("Test Subject 2")
+                        .status(NotificationStatus.FAILED)
+                        .createdOn(LocalDateTime.now())
+                        .type(NotificationType.EMAIL)
+                        .build()
+        );
+
+        // 2. Mock the service call
+        when(notificationService.getNotificationHistory(any()))
+                .thenReturn(notificationResponses.stream()
+                        .map(response -> aRandomNotification()) // Or real entities if you prefer
+                        .toList());
+
+        // 3. Perform the GET request
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("userId", userId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].subject").isNotEmpty())
+                .andExpect(jsonPath("$[0].status").isNotEmpty())
+                .andExpect(jsonPath("$[0].createdOn").isNotEmpty())
+                .andExpect(jsonPath("$[0].type").isNotEmpty());
+
+        // 4. Verify interaction
+        verify(notificationService, times(1)).getNotificationHistory(userId);
+    }
+
+    @Test
+    void changeNotificationPreference_happyPath() throws Exception {
+
+        // 1. Prepare mock return
+        when(notificationService.changeNotificationPreference(any(), anyBoolean()))
+                .thenReturn(aRandomNotificationPreference());
+
+        // 2. Build request
+        MockHttpServletRequestBuilder request = put("/api/v1/notifications/preferences")
+                .param("userId", UUID.randomUUID().toString())
+                .param("enabled", "true");
+
+        // 3. Send and verify response
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("id").isNotEmpty())
+                .andExpect(jsonPath("userId").isNotEmpty())
+                .andExpect(jsonPath("type").isNotEmpty())
+                .andExpect(jsonPath("enabled").isNotEmpty())
+                .andExpect(jsonPath("contactInfo").isNotEmpty());
+
+        // 4. Verify service call
+        verify(notificationService, times(1)).changeNotificationPreference(any(), eq(true));
+    }
+
+
+    @Test
     void postWithBodyToSendNotification_returns201AndNotification() throws Exception {
 
         UUID userId = UUID.randomUUID();
@@ -103,14 +168,30 @@ public class NotificationControllerApiTest {
                 .andExpect(jsonPath("type").isNotEmpty());
     }
 
-//    @Test
-//    void getRequestNotificationHistory_happyPath() throws Exception {
-//
-//        UUID userId = UUID.randomUUID();
-//        List<NotificationResponse> notifications = List.of(NotificationResponse.builder().subject("asdf").createdOn(LocalDateTime.now()).status(NotificationStatus.SUCCEEDED).type(NotificationType.EMAIL).build());
-//        when(notificationService.getNotificationHistory(any())).thenReturn(notifications);
-//    }
-//
+    @Test
+    void putWithParamRetryFailedNotifications_returns200() throws Exception {
+
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(put("/api/v1/notifications")
+                .param("userId", userId.toString()))
+                .andExpect(status().isOk());
+
+        verify(notificationService, times(1)).retryFailedNotifications(userId);
+    }
+
+    @Test
+    void deleteWithParamClearNotificationHistory_returns200() throws Exception {
+
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/notifications")
+                        .param("userId", userId.toString()))
+                .andExpect(status().isOk());
+
+        verify(notificationService, times(1)).clearNotifications(userId);
+    }
+
 
 
 }
